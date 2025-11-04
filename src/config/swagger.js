@@ -22,8 +22,8 @@ const options = {
         description: 'Development server'
       },
       {
-        url: 'https://api.studyspark.dev/api/v1',
-        description: 'Production server'
+        url: 'https://studysparkbackend.onrender.com/api/v1',
+        description: 'Production server (Render)'
       }
     ],
     components: {
