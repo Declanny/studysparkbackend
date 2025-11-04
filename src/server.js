@@ -44,11 +44,40 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Swagger Documentation
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-  customSiteTitle: 'StudySpark API Docs',
-  customCss: '.swagger-ui .topbar { display: none }'
-}));
+// Root route - API info
+app.get('/', (req, res) => {
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  res.json({
+    success: true,
+    message: '🎓 Welcome to StudySpark API',
+    version: '1.0.0',
+    status: 'running',
+    documentation: `${baseUrl}/api-docs`,
+    endpoints: {
+      auth: {
+        register: `${baseUrl}/api/v1/auth/register`,
+        login: `${baseUrl}/api/v1/auth/login`,
+        me: `${baseUrl}/api/v1/auth/me`
+      },
+      study: {
+        query: `${baseUrl}/api/v1/study/query`,
+        recommendations: `${baseUrl}/api/v1/study/recommendations`
+      },
+      quiz: {
+        generate: `${baseUrl}/api/v1/quiz/personal/generate`,
+        join: `${baseUrl}/api/v1/quiz/join`
+      },
+      analytics: {
+        performance: `${baseUrl}/api/v1/analytics/performance`
+      }
+    },
+    links: {
+      docs: `${baseUrl}/api-docs`,
+      health: `${baseUrl}/health`,
+      github: 'https://github.com/Declanny/studysparkbackend'
+    }
+  });
+});
 
 // Health check
 app.get('/health', (req, res) => {
@@ -58,6 +87,17 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     docs: '/api-docs'
   });
+});
+
+// Swagger Documentation at /api-docs
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customSiteTitle: 'StudySpark API Docs',
+  customCss: '.swagger-ui .topbar { display: none }'
+}));
+
+// Alias: /docs redirects to /api-docs
+app.get('/docs', (req, res) => {
+  res.redirect('/api-docs');
 });
 
 // API Routes
@@ -70,7 +110,13 @@ app.use('/api/v1/analytics', analyticsRoutes);
 app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
-    error: 'Route not found'
+    error: 'Route not found',
+    availableRoutes: {
+      root: '/',
+      health: '/health',
+      docs: '/api-docs or /docs',
+      api: '/api/v1/*'
+    }
   });
 });
 
