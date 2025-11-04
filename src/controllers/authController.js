@@ -1,13 +1,31 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import User from '../models/User.js';
+import RefreshToken from '../models/RefreshToken.js';
 
-// Generate JWT Token
-const generateToken = (userId) => {
+// Generate Access Token (short-lived: 15 minutes)
+const generateAccessToken = (userId) => {
   return jwt.sign(
     { userId },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    { expiresIn: '15m' }
   );
+};
+
+// Generate Refresh Token (long-lived: 30 days)
+const generateRefreshToken = async (userId, ipAddress) => {
+  // Create random token
+  const token = crypto.randomBytes(40).toString('hex');
+
+  // Save to database
+  const refreshToken = await RefreshToken.create({
+    token,
+    userId,
+    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+    createdByIp: ipAddress
+  });
+
+  return refreshToken.token;
 };
 
 // @desc    Register new user
@@ -44,13 +62,16 @@ export const register = async (req, res) => {
       level
     });
 
-    // Generate token
-    const token = generateToken(user._id);
+    // Generate tokens
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const accessToken = generateAccessToken(user._id);
+    const refreshToken = await generateRefreshToken(user._id, ipAddress);
 
     res.status(201).json({
       success: true,
       user: user.toJSON(),
-      token
+      accessToken,
+      refreshToken
     });
 
   } catch (error) {
@@ -95,13 +116,16 @@ export const login = async (req, res) => {
       });
     }
 
-    // Generate token
-    const token = generateToken(user._id);
+    // Generate tokens
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const accessToken = generateAccessToken(user._id);
+    const refreshToken = await generateRefreshToken(user._id, ipAddress);
 
     res.json({
       success: true,
       user: user.toJSON(),
-      token
+      accessToken,
+      refreshToken
     });
 
   } catch (error) {
@@ -146,11 +170,22 @@ export const getMe = async (req, res) => {
 // @access  Private
 export const logout = async (req, res) => {
   try {
-    // In JWT authentication, logout is primarily handled client-side by removing the token
-    // Here we can log the logout event, add token to blacklist, etc.
+    const { refreshToken } = req.body;
 
-    // Optional: Add token blacklisting logic here in the future
-    // For now, just send success response
+    if (!refreshToken) {
+      return res.json({
+        success: true,
+        message: 'Logged out successfully'
+      });
+    }
+
+    // Revoke the refresh token
+    const token = await RefreshToken.findOne({ token: refreshToken });
+    if (token) {
+      token.revokedAt = Date.now();
+      token.revokedByIp = req.ip || req.connection.remoteAddress;
+      await token.save();
+    }
 
     res.json({
       success: true,
@@ -162,6 +197,65 @@ export const logout = async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Server error during logout'
+    });
+  }
+};
+
+// @desc    Refresh access token
+// @route   POST /api/v1/auth/refresh
+// @access  Public
+export const refreshAccessToken = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(400).json({
+        success: false,
+        error: 'Refresh token is required'
+      });
+    }
+
+    // Find refresh token in database
+    const storedToken = await RefreshToken.findOne({ token: refreshToken });
+
+    if (!storedToken || !storedToken.isActive()) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid or expired refresh token'
+      });
+    }
+
+    // Get user
+    const user = await User.findById(storedToken.userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    // Generate new tokens
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const newAccessToken = generateAccessToken(user._id);
+    const newRefreshToken = await generateRefreshToken(user._id, ipAddress);
+
+    // Revoke old refresh token and mark it as replaced
+    storedToken.revokedAt = Date.now();
+    storedToken.revokedByIp = ipAddress;
+    storedToken.replacedByToken = newRefreshToken;
+    await storedToken.save();
+
+    res.json({
+      success: true,
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken
+    });
+
+  } catch (error) {
+    console.error('Refresh token error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error during token refresh'
     });
   }
 };

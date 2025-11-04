@@ -1,5 +1,5 @@
 import express from 'express';
-import { register, login, getMe, logout } from '../controllers/authController.js';
+import { register, login, getMe, logout, refreshAccessToken } from '../controllers/authController.js';
 import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -156,6 +156,14 @@ router.get('/me', protect, getMe);
  *     tags: [Authentication]
  *     security:
  *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               refreshToken:
+ *                 type: string
  *     responses:
  *       200:
  *         description: Logout successful
@@ -178,5 +186,45 @@ router.get('/me', protect, getMe);
  *               $ref: '#/components/schemas/Error'
  */
 router.post('/logout', protect, logout);
+
+/**
+ * @swagger
+ * /auth/refresh:
+ *   post:
+ *     summary: Refresh access token
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refreshToken
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *                 example: a1b2c3d4e5f6...
+ *     responses:
+ *       200:
+ *         description: Token refreshed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 accessToken:
+ *                   type: string
+ *                 refreshToken:
+ *                   type: string
+ *       400:
+ *         description: Refresh token required
+ *       401:
+ *         description: Invalid or expired refresh token
+ */
+router.post('/refresh', refreshAccessToken);
 
 export default router;
