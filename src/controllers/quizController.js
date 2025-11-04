@@ -68,32 +68,29 @@ export const generateQuiz = async (req, res) => {
  */
 export const createLiveQuiz = async (req, res) => {
   try {
-    const { quizId } = req.body;
+    const { title, topic, subject, difficulty, questions, timeLimit } = req.body;
 
-    if (!quizId) {
+    if (!title || !topic || !questions || questions.length === 0) {
       return res.status(400).json({
         success: false,
-        error: 'Quiz ID is required'
+        error: 'Title, topic, and questions are required'
       });
     }
 
-    // Find the quiz
-    const quiz = await Quiz.findById(quizId);
-
-    if (!quiz) {
-      return res.status(404).json({
-        success: false,
-        error: 'Quiz not found'
-      });
-    }
-
-    // Check if user is the creator
-    if (quiz.createdBy.toString() !== req.user.userId) {
-      return res.status(403).json({
-        success: false,
-        error: 'You are not authorized to activate this quiz'
-      });
-    }
+    // Create quiz with live type
+    const quiz = await Quiz.create({
+      title,
+      topic,
+      subject,
+      type: 'live',
+      createdBy: req.user.userId,
+      questions,
+      difficulty: difficulty || 'medium',
+      questionCount: questions.length,
+      duration: timeLimit || 30,
+      status: 'draft', // Start as draft, admin will activate
+      isLive: false
+    });
 
     // Generate unique code
     let code;
@@ -104,13 +101,12 @@ export const createLiveQuiz = async (req, res) => {
       if (!existing) isUnique = true;
     }
 
-    // Update quiz
+    // Update quiz with code and make it active (ready for participants to join)
     quiz.code = code;
-    quiz.status = 'active';
-    quiz.isLive = false; // Will be set to true when admin starts quiz
+    quiz.status = 'active'; // Active means participants can join, but quiz hasn't started
     await quiz.save();
 
-    res.json({
+    res.status(201).json({
       success: true,
       message: 'Live quiz created successfully',
       code: quiz.code,
@@ -120,7 +116,9 @@ export const createLiveQuiz = async (req, res) => {
         code: quiz.code,
         topic: quiz.topic,
         questionCount: quiz.questions.length,
-        duration: quiz.duration
+        duration: quiz.duration,
+        isLive: quiz.isLive,
+        status: quiz.status
       }
     });
   } catch (error) {
@@ -547,6 +545,115 @@ export const getQuizAttempts = async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch quiz attempts'
+    });
+  }
+};
+
+/**
+ * @desc    Get all personal quizzes for user
+ * @route   GET /api/v1/quiz/personal
+ * @access  Private
+ */
+export const getPersonalQuizzes = async (req, res) => {
+  try {
+    const quizzes = await Quiz.find({
+      createdBy: req.user.userId,
+      type: 'personal'
+    })
+      .select('-questions.correctAnswer -questions.explanation')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      count: quizzes.length,
+      quizzes
+    });
+  } catch (error) {
+    console.error('Get personal quizzes error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch personal quizzes'
+    });
+  }
+};
+
+/**
+ * @desc    Get live quiz by ID (for admin dashboard)
+ * @route   GET /api/v1/quiz/live/:quizId
+ * @access  Private
+ */
+export const getLiveQuiz = async (req, res) => {
+  try {
+    const { quizId } = req.params;
+
+    const quiz = await Quiz.findById(quizId);
+
+    if (!quiz) {
+      return res.status(404).json({
+        success: false,
+        error: 'Quiz not found'
+      });
+    }
+
+    // Check if user is the creator
+    if (quiz.createdBy.toString() !== req.user.userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'You are not authorized to view this quiz'
+      });
+    }
+
+    res.json({
+      success: true,
+      quiz
+    });
+  } catch (error) {
+    console.error('Get live quiz error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch quiz'
+    });
+  }
+};
+
+/**
+ * @desc    Create a personal quiz directly
+ * @route   POST /api/v1/quiz/personal/create
+ * @access  Private
+ */
+export const createPersonalQuiz = async (req, res) => {
+  try {
+    const { title, topic, subject, difficulty, questions } = req.body;
+
+    if (!title || !topic || !questions || questions.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Title, topic, and questions are required'
+      });
+    }
+
+    const quiz = await Quiz.create({
+      title,
+      topic,
+      subject,
+      type: 'personal',
+      createdBy: req.user.userId,
+      questions,
+      difficulty: difficulty || 'medium',
+      questionCount: questions.length,
+      status: 'active'
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Personal quiz created successfully',
+      quiz
+    });
+  } catch (error) {
+    console.error('Create personal quiz error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create personal quiz'
     });
   }
 };

@@ -3,13 +3,16 @@ import { protect, authorize } from '../middleware/auth.js';
 import {
   generateQuiz,
   createLiveQuiz,
+  createPersonalQuiz,
   joinQuiz,
   startQuiz,
   endQuiz,
   getQuiz,
   saveQuizProgress,
   submitQuiz,
-  getQuizAttempts
+  getQuizAttempts,
+  getPersonalQuizzes,
+  getLiveQuiz
 } from '../controllers/quizController.js';
 
 const router = express.Router();
@@ -93,7 +96,7 @@ router.post('/live/create', protect, createLiveQuiz);
 
 /**
  * @swagger
- * /quiz/join:
+ * /quiz/live/join:
  *   post:
  *     summary: Join live quiz with code (User)
  *     tags: [Quiz - Live]
@@ -115,7 +118,7 @@ router.post('/live/create', protect, createLiveQuiz);
  *       200:
  *         description: Joined quiz successfully
  */
-router.post('/join', protect, joinQuiz);
+router.post('/live/join', protect, joinQuiz);
 
 /**
  * @swagger
@@ -157,7 +160,83 @@ router.post('/live/start/:quizId', protect, startQuiz);
  */
 router.post('/live/end/:quizId', protect, endQuiz);
 
+/**
+ * @swagger
+ * /quiz/live/{quizId}:
+ *   get:
+ *     summary: Get live quiz details (Admin dashboard)
+ *     tags: [Quiz - Live]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: quizId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Live quiz details with participants
+ */
+router.get('/live/:quizId', protect, getLiveQuiz);
+
 // ========== PERSONAL QUIZ ENDPOINTS ==========
+
+/**
+ * @swagger
+ * /quiz/personal/create:
+ *   post:
+ *     summary: Create a personal quiz
+ *     tags: [Quiz - Personal]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - topic
+ *               - questions
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 example: Data Structures Quiz
+ *               topic:
+ *                 type: string
+ *                 example: Binary Trees
+ *               subject:
+ *                 type: string
+ *                 example: Computer Science
+ *               difficulty:
+ *                 type: string
+ *                 enum: [easy, medium, hard]
+ *                 example: medium
+ *               questions:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *     responses:
+ *       201:
+ *         description: Personal quiz created successfully
+ */
+router.post('/personal/create', protect, createPersonalQuiz);
+
+/**
+ * @swagger
+ * /quiz/personal:
+ *   get:
+ *     summary: Get all personal quizzes for user
+ *     tags: [Quiz - Personal]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of personal quizzes
+ */
+router.get('/personal', protect, getPersonalQuizzes);
 
 /**
  * @swagger

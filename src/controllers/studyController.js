@@ -342,6 +342,39 @@ Make your answer:
  * @route   POST /api/v1/study/materials/search
  * @access  Private
  */
+/**
+ * @desc    Simple query endpoint without creating a chat session
+ * @route   POST /api/v1/study/query
+ * @access  Private
+ */
+export const simpleQuery = async (req, res) => {
+  try {
+    const { topic, message } = req.body;
+
+    if (!message) {
+      return res.status(400).json({
+        success: false,
+        error: 'Message is required'
+      });
+    }
+
+    // Generate AI response using the Gemini service
+    const aiResponse = await generateChatResponse(message, topic);
+
+    res.json({
+      success: true,
+      response: aiResponse
+    });
+  } catch (error) {
+    console.error('Simple query error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate AI response',
+      details: error.message
+    });
+  }
+};
+
 export const searchMaterials = async (req, res) => {
   try {
     const { query, materialIds, limit } = req.body;

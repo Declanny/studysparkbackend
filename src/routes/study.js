@@ -7,7 +7,8 @@ import {
   getStudyChatById,
   addMessageToChat,
   chatWithContext,
-  searchMaterials
+  searchMaterials,
+  simpleQuery
 } from '../controllers/studyController.js';
 import materialsRouter from './materials.js';
 
@@ -66,6 +67,35 @@ router.use('/materials', materialsRouter);
  *                         type: object
  */
 router.post('/chat', protect, createStudyChat);
+
+/**
+ * @swagger
+ * /study/query:
+ *   post:
+ *     summary: Simple query endpoint without creating a chat session
+ *     tags: [Study AI]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - message
+ *             properties:
+ *               topic:
+ *                 type: string
+ *                 example: Data Structures
+ *               message:
+ *                 type: string
+ *                 example: What is a binary search tree?
+ *     responses:
+ *       200:
+ *         description: AI response
+ */
+router.post('/query', protect, simpleQuery);
 
 /**
  * @swagger
