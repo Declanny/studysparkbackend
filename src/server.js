@@ -57,6 +57,7 @@ app.get('/', (req, res) => {
       auth: {
         register: `${baseUrl}/api/v1/auth/register`,
         login: `${baseUrl}/api/v1/auth/login`,
+        logout: `${baseUrl}/api/v1/auth/logout`,
         me: `${baseUrl}/api/v1/auth/me`
       },
       study: {

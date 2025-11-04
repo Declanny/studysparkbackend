@@ -119,7 +119,7 @@ export const login = async (req, res) => {
 export const getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -137,6 +137,31 @@ export const getMe = async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Server error'
+    });
+  }
+};
+
+// @desc    Logout user
+// @route   POST /api/v1/auth/logout
+// @access  Private
+export const logout = async (req, res) => {
+  try {
+    // In JWT authentication, logout is primarily handled client-side by removing the token
+    // Here we can log the logout event, add token to blacklist, etc.
+
+    // Optional: Add token blacklisting logic here in the future
+    // For now, just send success response
+
+    res.json({
+      success: true,
+      message: 'Logged out successfully'
+    });
+
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error during logout'
     });
   }
 };
