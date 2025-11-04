@@ -62,6 +62,61 @@ export const generateQuiz = async (req, res) => {
 };
 
 /**
+ * @desc    Generate questions only (without saving to database)
+ * @route   POST /api/v1/quiz/questions/generate
+ * @access  Private
+ */
+export const generateQuestions = async (req, res) => {
+  try {
+    const { topic, subject, difficulty, questionCount, includeExplanations } = req.body;
+
+    // Validate required fields
+    if (!topic) {
+      return res.status(400).json({
+        success: false,
+        error: 'Topic is required'
+      });
+    }
+
+    // Generate sample questions
+    // TODO: Integrate with AI service (OpenAI, Gemini) to generate questions
+    const questions = generateSampleQuestions(
+      topic,
+      questionCount || 10,
+      difficulty || 'medium'
+    );
+
+    // Format questions for frontend
+    const formattedQuestions = questions.map((q, index) => ({
+      id: `temp-${index + 1}`,
+      questionText: q.questionText,
+      options: q.options,
+      correctAnswer: q.correctAnswer,
+      explanation: includeExplanations ? q.explanation : undefined,
+      difficulty: q.difficulty,
+      points: q.points
+    }));
+
+    res.status(200).json({
+      success: true,
+      questions: formattedQuestions,
+      metadata: {
+        topic,
+        subject: subject || topic,
+        difficulty: difficulty || 'medium',
+        count: formattedQuestions.length
+      }
+    });
+  } catch (error) {
+    console.error('Generate questions error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate questions'
+    });
+  }
+};
+
+/**
  * @desc    Create live quiz and generate code for users to join (Admin)
  * @route   POST /api/v1/quiz/live/create
  * @access  Private (Admin)

@@ -2,6 +2,7 @@ import express from 'express';
 import { protect, authorize } from '../middleware/auth.js';
 import {
   generateQuiz,
+  generateQuestions,
   createLiveQuiz,
   createPersonalQuiz,
   joinQuiz,
@@ -65,6 +66,58 @@ const router = express.Router();
  *         description: Quiz generated successfully
  */
 router.post('/generate', protect, generateQuiz);
+
+/**
+ * @swagger
+ * /quiz/questions/generate:
+ *   post:
+ *     summary: Generate questions only (without saving to database)
+ *     tags: [Quiz]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - topic
+ *             properties:
+ *               topic:
+ *                 type: string
+ *                 example: Data Structures
+ *               subject:
+ *                 type: string
+ *                 example: Computer Science
+ *               difficulty:
+ *                 type: string
+ *                 enum: [easy, medium, hard, mixed]
+ *                 example: medium
+ *               questionCount:
+ *                 type: integer
+ *                 example: 10
+ *               includeExplanations:
+ *                 type: boolean
+ *                 example: true
+ *     responses:
+ *       200:
+ *         description: Questions generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 questions:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 metadata:
+ *                   type: object
+ */
+router.post('/questions/generate', protect, generateQuestions);
 
 // ========== LIVE QUIZ ENDPOINTS ==========
 
