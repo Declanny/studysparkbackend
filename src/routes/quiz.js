@@ -293,6 +293,20 @@ router.get('/personal', protect, getPersonalQuizzes);
 
 /**
  * @swagger
+ * /quiz/attempts:
+ *   get:
+ *     summary: Get user's quiz attempts history
+ *     tags: [Quiz - Personal]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of quiz attempts
+ */
+router.get('/attempts', protect, getQuizAttempts);
+
+/**
+ * @swagger
  * /quiz/{quizId}:
  *   get:
  *     summary: Fetch quiz questions (User)
@@ -389,19 +403,5 @@ router.post('/:quizId/save', protect, saveQuizProgress);
  *         description: Quiz submitted with results
  */
 router.post('/:quizId/submit', protect, submitQuiz);
-
-/**
- * @swagger
- * /quiz/attempts:
- *   get:
- *     summary: Get user's quiz attempts history
- *     tags: [Quiz - Personal]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: List of quiz attempts
- */
-router.get('/attempts', protect, getQuizAttempts);
 
 export default router;

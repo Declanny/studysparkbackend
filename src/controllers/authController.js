@@ -3,12 +3,12 @@ import crypto from 'crypto';
 import User from '../models/User.js';
 import RefreshToken from '../models/RefreshToken.js';
 
-// Generate Access Token (short-lived: 15 minutes)
+// Generate Access Token (configurable via env or default 7 days)
 const generateAccessToken = (userId) => {
   return jwt.sign(
     { userId },
     process.env.JWT_SECRET,
-    { expiresIn: '15m' }
+    { expiresIn: process.env.JWT_EXPIRE || '7d' }
   );
 };
 
