@@ -1,5 +1,7 @@
 import StudyChat from '../models/StudyChat.js';
 import axios from 'axios';
+import { generateEmbedding, generateChatResponse } from '../services/embeddingService.js';
+import { searchSimilarChunks, formatContextFromChunks, rerankChunks } from '../services/vectorSearchService.js';
 
 /**
  * @desc    Create chat session with AI (includes question, YouTube recommendations, and AI response)
@@ -229,6 +231,165 @@ export const addMessageToChat = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Chat with AI using course material context (RAG)
+ * @route   POST /api/v1/study/chat-with-context
+ * @access  Private
+ */
+export const chatWithContext = async (req, res) => {
+  try {
+    const { message, materialIds, topic, subject } = req.body;
+    const userId = req.user.userId;
+
+    // Validate inputs
+    if (!message) {
+      return res.status(400).json({
+        success: false,
+        error: 'Message is required'
+      });
+    }
+
+    // Generate embedding for user's question
+    const queryEmbedding = await generateEmbedding(message);
+
+    // Search for relevant chunks from course materials
+    const relevantChunks = await searchSimilarChunks(
+      queryEmbedding,
+      userId,
+      materialIds || [],
+      5, // Top 5 chunks
+      0.5 // Minimum similarity threshold
+    );
+
+    // Re-rank chunks for better results
+    const rerankedChunks = rerankChunks(relevantChunks, message);
+
+    // Build context from chunks
+    const context = formatContextFromChunks(rerankedChunks, 5);
+
+    // Construct enhanced prompt for Gemini
+    const prompt = `You are an AI study assistant helping a university student understand their course material.
+
+${context ? `CONTEXT FROM STUDENT'S COURSE MATERIAL:
+${context}
+
+` : ''}STUDENT'S QUESTION: ${message}
+
+${context ? 'Please provide a clear, educational answer based primarily on the context provided above. If the context contains relevant information, use it to answer. If the context does not contain enough information, acknowledge this and provide a general answer.' : 'Please provide a helpful, educational answer to assist the student.'}
+
+Make your answer:
+1. Clear and easy to understand
+2. Educational and detailed
+3. Include examples where appropriate
+4. Structured with bullet points or numbered lists when helpful`;
+
+    // Get response from Gemini
+    const aiResponse = await generateChatResponse(prompt);
+
+    // Create or update chat session
+    let chat = await StudyChat.findOne({
+      user: userId,
+      topic: topic || 'General',
+      status: 'active'
+    });
+
+    if (!chat) {
+      chat = await StudyChat.create({
+        user: userId,
+        topic: topic || 'General',
+        subject: subject || 'General',
+        attachedMaterials: rerankedChunks.map(chunk => ({
+          materialId: chunk.materialId,
+          materialTitle: chunk.materialTitle,
+          attachedAt: new Date()
+        }))
+      });
+    }
+
+    // Add messages to chat
+    chat.addMessage('user', message);
+    chat.addMessage('assistant', aiResponse);
+    chat.contextUsed = context.length > 0;
+    await chat.save();
+
+    res.json({
+      success: true,
+      data: {
+        chatId: chat._id,
+        aiResponse,
+        contextUsed: context.length > 0,
+        chunksUsed: rerankedChunks.slice(0, 3).map(chunk => ({
+          materialTitle: chunk.materialTitle,
+          materialTopic: chunk.materialTopic,
+          similarity: (chunk.similarity * 100).toFixed(1) + '%',
+          preview: chunk.content.substring(0, 150) + '...'
+        })),
+        messageCount: chat.messageCount
+      }
+    });
+  } catch (error) {
+    console.error('Chat with context error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate response',
+      details: error.message
+    });
+  }
+};
+
+/**
+ * @desc    Search similar content in course materials
+ * @route   POST /api/v1/study/materials/search
+ * @access  Private
+ */
+export const searchMaterials = async (req, res) => {
+  try {
+    const { query, materialIds, limit } = req.body;
+    const userId = req.user.userId;
+
+    if (!query) {
+      return res.status(400).json({
+        success: false,
+        error: 'Search query is required'
+      });
+    }
+
+    // Generate embedding for search query
+    const queryEmbedding = await generateEmbedding(query);
+
+    // Search for similar chunks
+    const results = await searchSimilarChunks(
+      queryEmbedding,
+      userId,
+      materialIds || [],
+      limit || 10,
+      0.4 // Lower threshold for search
+    );
+
+    res.json({
+      success: true,
+      query,
+      count: results.length,
+      results: results.map(chunk => ({
+        materialId: chunk.materialId,
+        materialTitle: chunk.materialTitle,
+        materialTopic: chunk.materialTopic,
+        content: chunk.content,
+        similarity: (chunk.similarity * 100).toFixed(1) + '%',
+        order: chunk.order,
+        wordCount: chunk.wordCount
+      }))
+    });
+  } catch (error) {
+    console.error('Search materials error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to search materials',
+      details: error.message
+    });
+  }
+};
+
 // ========== HELPER FUNCTIONS ==========
 
 /**
@@ -337,5 +498,7 @@ export default {
   getRecommendations,
   getStudyChats,
   getStudyChatById,
-  addMessageToChat
+  addMessageToChat,
+  chatWithContext,
+  searchMaterials
 };
