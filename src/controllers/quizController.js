@@ -1,6 +1,7 @@
 import Quiz from '../models/Quiz.js';
 import QuizAttempt from '../models/QuizAttempt.js';
 import User from '../models/User.js';
+import { generateValidatedQuiz } from '../services/generatequiz.js';
 
 // ========== LIVE QUIZ ENDPOINTS ==========
 
