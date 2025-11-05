@@ -811,20 +811,38 @@ router.post('/:quizId/save', protect, saveQuizProgress);
  *                   example: 507f1f77bcf86cd799439011
  *                 answers:
  *                   type: array
- *                   description: Detailed answer feedback (only if quiz.showCorrectAnswers is true)
+ *                   description: Detailed answer feedback with correct answers, explanations, and all options for educational review
  *                   items:
  *                     type: object
  *                     properties:
  *                       questionId:
  *                         type: string
+ *                         example: 507f1f77bcf86cd799439011
+ *                       questionText:
+ *                         type: string
+ *                         description: The full text of the question
+ *                         example: What is the time complexity of binary search?
  *                       selectedAnswer:
  *                         type: string
+ *                         description: The answer selected by the user
+ *                         example: O(log n)
  *                       correctAnswer:
  *                         type: string
+ *                         description: The correct answer to the question
+ *                         example: O(log n)
  *                       isCorrect:
  *                         type: boolean
+ *                         description: Whether the user's answer was correct
+ *                         example: true
  *                       explanation:
  *                         type: string
+ *                         description: Educational explanation of the correct answer
+ *                         example: Binary search divides the search space in half with each iteration, resulting in logarithmic time complexity
+ *                       options:
+ *                         type: array
+ *                         description: All available answer options for this question
+ *                         items:
+ *                           $ref: '#/components/schemas/QuestionOption'
  *       404:
  *         description: Quiz not found
  *         content:
