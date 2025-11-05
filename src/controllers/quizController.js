@@ -678,25 +678,49 @@ export const getLiveQuiz = async (req, res) => {
  */
 export const createPersonalQuiz = async (req, res) => {
   try {
-    const { title, topic, subject, difficulty, questions } = req.body;
+    // removed title 
+    // changed subject to course
+    // changed questions to numberQuestions
+    console.log("print user", req.user.userId);
 
-    if (!title || !topic || !questions || questions.length === 0) {
+    const { topic, course, difficulty, numberQuestions } = req.body;
+
+    if (!topic || numberQuestions === 0) {
       return res.status(400).json({
         success: false,
-        error: 'Title, topic, and questions are required'
+        error: 'Topic, and number of questions are required'
+      });
+    }
+    //  generate questions with AL service
+    const generatedQuiz = await generateValidatedQuiz(topic, numberQuestions, difficulty || 'medium');
+    if (!generatedQuiz) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to generate quiz questions'
       });
     }
 
+    console.log("generated quiz in controller", generateQuiz);
+
+
+    // Destructure generated quiz data
+
+
+
+    // Note: createdBy, code, startedAt, endedAt will be handled by your application
+
     const quiz = await Quiz.create({
-      title,
-      topic,
-      subject,
-      type: 'personal',
-      createdBy: req.user.userId,
-      questions,
-      difficulty: difficulty || 'medium',
-      questionCount: questions.length,
-      status: 'active'
+
+      ...generatedQuiz,
+      course,
+      createdBy: req.user.userId || "690a3c4582649fa9b470aa5a",
+
+      type: 'personal', // Default to personal, can be updated later
+      isLive: false,
+      shuffleQuestions: true,
+      showCorrectAnswers: true,
+      status: 'draft',
+      participants: [],
     });
 
     res.status(201).json({
