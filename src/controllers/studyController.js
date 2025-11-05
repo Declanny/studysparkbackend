@@ -2,62 +2,38 @@ import StudyChat from '../models/StudyChat.js';
 import axios from 'axios';
 import { generateEmbedding, generateChatResponse } from '../services/embeddingService.js';
 import { searchSimilarChunks, formatContextFromChunks, rerankChunks } from '../services/vectorSearchService.js';
+import StudyChatService from '../services/studychatRecomendationService.js';
+// import {  } from "module";
+// import StudyChatService from '../services/studyChatService.js';
 
 /**
  * @desc    Create chat session with AI (includes question, YouTube recommendations, and AI response)
  * @route   POST /api/v1/study/chat
  * @access  Private
  */
+// instantiate the service
+const studyChatService = new StudyChatService();
 export const createStudyChat = async (req, res) => {
   try {
-    const { topic, message, subject } = req.body;
-
-    if (!topic || !message) {
+    const { topic, message, course } = req.body;
+    const userId = req.user.userId;
+    if (!userId || !topic || !message) {
       return res.status(400).json({
         success: false,
         error: 'Topic and message are required'
       });
     }
 
-    // Find or create study chat session
-    let chat = await StudyChat.findOne({
-      user: req.user.userId,
-      topic,
-      status: 'active'
-    });
-
-    if (!chat) {
-      chat = await StudyChat.create({
-        user: req.user.userId,
-        topic,
-        subject: subject || 'General'
-      });
-    }
-
-    // Add user message
-    chat.addMessage('user', message);
-
-    // TODO: Get AI response from OpenAI/Gemini API
-    // For now, return a mock response
-    const aiResponse = await generateAIResponse(topic, message);
-    chat.addMessage('assistant', aiResponse);
-
-    // Get YouTube recommendations
-    const recommendations = await getYouTubeRecommendations(topic, message);
-    recommendations.forEach(rec => chat.addRecommendation(rec));
-
-    await chat.save();
-
-    res.json({
+    //  new implementation using the service
+    // const result = await studyChatService.
+    const result = await studyChatService.handleStudyChat(userId, topic, course, message);
+    return res.json({
       success: true,
       message: 'AI response generated successfully',
-      data: {
-        chatId: chat._id,
-        aiResponse,
-        recommendations,
-        messageCount: chat.messageCount
-      }
+      data: result
     });
+
+    
   } catch (error) {
     console.error('Create study chat error:', error);
     res.status(500).json({
@@ -74,7 +50,7 @@ export const createStudyChat = async (req, res) => {
  */
 export const getRecommendations = async (req, res) => {
   try {
-    const { topic, subject } = req.query;
+    const { topic, course } = req.query;
 
     if (!topic) {
       return res.status(400).json({
@@ -238,7 +214,7 @@ export const addMessageToChat = async (req, res) => {
  */
 export const chatWithContext = async (req, res) => {
   try {
-    const { message, materialIds, topic, subject } = req.body;
+    const { message, materialIds, topic, course } = req.body;
     const userId = req.user.userId;
 
     // Validate inputs
@@ -297,7 +273,7 @@ Make your answer:
       chat = await StudyChat.create({
         user: userId,
         topic: topic || 'General',
-        subject: subject || 'General',
+        course: course || 'General',
         attachedMaterials: rerankedChunks.map(chunk => ({
           materialId: chunk.materialId,
           materialTitle: chunk.materialTitle,
