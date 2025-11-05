@@ -66,7 +66,7 @@ async function generateQuiz(topic, numQuestions, difficulty) {
         });
 
         const quizData = JSON.parse(completion.choices[0].message.content);
-        
+
         // Add additional fields required by your schema
         // return {
         //     ...quizData
@@ -83,7 +83,7 @@ async function generateQuiz(topic, numQuestions, difficulty) {
 function validateQuizSchema(quizData) {
     const requiredFields = ['title', 'topic', 'questions'];
     const missingFields = requiredFields.filter(field => !quizData[field]);
-    
+
     if (missingFields.length > 0) {
         throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
     }
@@ -93,7 +93,7 @@ function validateQuizSchema(quizData) {
         if (!question.questionText) {
             throw new Error(`Question ${index + 1} missing questionText`);
         }
-        
+
         if (!Array.isArray(question.options) || question.options.length !== 4) {
             throw new Error(`Question ${index + 1} must have exactly 4 options`);
         }
@@ -121,37 +121,12 @@ function validateQuizSchema(quizData) {
 async function generateValidatedQuiz(topic, numQuestions, difficulty) {
     const quizData = await generateQuiz(topic, numQuestions, difficulty);
     console.log("this generated quiz data", quizData);
-    
+
     validateQuizSchema(quizData);
     return quizData;
 }
 
-// Usage example
-async function main() {
-    try {
-        const quiz = await generateValidatedQuiz(
-            "JavaScript Programming",
-            3,
-            "medium"
-        );
-        
-        console.log("Generated Quiz:");
-        console.log(JSON.stringify(quiz, null, 2));
-        
-        // Example of how you might use this with your Mongoose model
-        // const newQuiz = new Quiz(quiz);
-        // newQuiz.createdBy = userId; // Set from your auth context
-        // if (type === 'live') {
-        //     newQuiz.code = newQuiz.generateCode();
-        //     newQuiz.isLive = true;
-        // }
-        // await newQuiz.save();
-        
-        return quiz;
-    } catch (error) {
-        console.error("Failed to generate quiz:", error);
-    }
-}
+
 
 // Export functions
 export { generateQuiz, generateValidatedQuiz, validateQuizSchema };
