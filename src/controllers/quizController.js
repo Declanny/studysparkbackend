@@ -545,26 +545,26 @@ export const submitQuiz = async (req, res) => {
     const results = attempt.calculateScore();
     await attempt.save();
 
-    // Return results with correct answers if quiz settings allow
+    // Return results with correct answers and explanations
+    // Always show answers and explanations after submission for learning purposes
     const response = {
       success: true,
       message: 'Quiz submitted successfully',
       results,
-      attemptId: attempt._id
-    };
-
-    if (quiz.showCorrectAnswers) {
-      response.answers = gradedAnswers.map(answer => {
+      attemptId: attempt._id,
+      answers: gradedAnswers.map(answer => {
         const question = quiz.questions.id(answer.questionId);
         return {
           questionId: answer.questionId,
+          questionText: question?.questionText,
           selectedAnswer: answer.selectedAnswer,
           correctAnswer: question?.correctAnswer,
           isCorrect: answer.isCorrect,
-          explanation: question?.explanation
+          explanation: question?.explanation,
+          options: question?.options
         };
-      });
-    }
+      })
+    };
 
     res.json(response);
   } catch (error) {
