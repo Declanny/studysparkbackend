@@ -1,11 +1,16 @@
 
 import Groq from "groq-sdk";
-import dotenv from 'dotenv';
-// Load environment variables
-dotenv.config();
 
-console.log("GROQ_API_KEY:", process.env.GROQ_API_KEY);
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+// Note: Environment variables are loaded in server.js via dotenv
+// Initialize Groq client lazily to ensure env vars are loaded
+let groq = null;
+
+function getGroqClient() {
+    if (!groq) {
+        groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    }
+    return groq;
+}
 
 async function generateQuiz(topic, numQuestions, difficulty) {
     const prompt = `
@@ -48,10 +53,11 @@ async function generateQuiz(topic, numQuestions, difficulty) {
     Generate ${numQuestions} questions following these rules.`;
 
     try {
-        const completion = await groq.chat.completions.create({
-            messages: [{ 
-                role: "user", 
-                content: prompt 
+        const groqClient = getGroqClient();
+        const completion = await groqClient.chat.completions.create({
+            messages: [{
+                role: "user",
+                content: prompt
             }],
             model: "llama-3.3-70b-versatile",
             temperature: 0.7,
