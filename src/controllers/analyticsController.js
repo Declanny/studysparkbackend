@@ -102,13 +102,26 @@ export const getQuizAnalysis = async (req, res) => {
     res.json({
       success: true,
       attempt: {
-        quiz: attempt.quiz.title,
-        topic: attempt.quiz.topic,
-        score: attempt.percentage,
-        timeSpent: attempt.timeSpent,
-        submittedAt: attempt.submittedAt
-      },
-      analysis: attempt.aiAnalysis
+        _id: attempt._id,
+        quiz: attempt.quiz._id,
+        user: attempt.user,
+        answers: attempt.answers,
+        score: attempt.score,
+        percentage: attempt.percentage,
+        totalQuestions: attempt.totalQuestions,
+        correctAnswers: attempt.correctAnswers,
+        aiAnalysis: attempt.aiAnalysis,
+        completedAt: attempt.submittedAt,
+        timeTaken: attempt.timeSpent,
+        // Include full quiz data with questions for detailed review
+        quizData: {
+          _id: attempt.quiz._id,
+          title: attempt.quiz.title,
+          topic: attempt.quiz.topic,
+          difficulty: attempt.quiz.difficulty,
+          questions: attempt.quiz.questions
+        }
+      }
     });
   } catch (error) {
     console.error('Get quiz analysis error:', error);
