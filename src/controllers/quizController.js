@@ -738,6 +738,60 @@ export const createPersonalQuiz = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Delete a personal quiz
+ * @route   DELETE /api/v1/quiz/personal/:quizId
+ * @access  Private
+ */
+export const deletePersonalQuiz = async (req, res) => {
+  try {
+    const { quizId } = req.params;
+
+    // Find the quiz
+    const quiz = await Quiz.findById(quizId);
+
+    if (!quiz) {
+      return res.status(404).json({
+        success: false,
+        error: 'Quiz not found'
+      });
+    }
+
+    // Check if quiz is personal type
+    if (quiz.type !== 'personal') {
+      return res.status(400).json({
+        success: false,
+        error: 'Only personal quizzes can be deleted through this endpoint'
+      });
+    }
+
+    // Check if user is the creator
+    if (quiz.createdBy.toString() !== req.user.userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'You are not authorized to delete this quiz'
+      });
+    }
+
+    // Delete the quiz
+    await Quiz.findByIdAndDelete(quizId);
+
+    // Optional: Also delete associated quiz attempts
+    await QuizAttempt.deleteMany({ quiz: quizId });
+
+    res.json({
+      success: true,
+      message: 'Personal quiz deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete personal quiz error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete personal quiz'
+    });
+  }
+};
+
 // ========== HELPER FUNCTIONS ==========
 
 function generateSampleQuestions(topic, count, difficulty) {

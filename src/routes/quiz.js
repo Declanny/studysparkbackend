@@ -13,7 +13,8 @@ import {
   submitQuiz,
   getQuizAttempts,
   getPersonalQuizzes,
-  getLiveQuiz
+  getLiveQuiz,
+  deletePersonalQuiz
 } from '../controllers/quizController.js';
 
 const router = express.Router();
@@ -595,6 +596,78 @@ router.post('/personal/create', protect, createPersonalQuiz);
  *               $ref: '#/components/schemas/Error'
  */
 router.get('/personal', protect, getPersonalQuizzes);
+
+/**
+ * @swagger
+ * /quiz/personal/{quizId}:
+ *   delete:
+ *     summary: Delete a personal quiz
+ *     description: Deletes a personal quiz created by the authenticated user. Also deletes all associated quiz attempts. Only the quiz creator can delete their own quiz.
+ *     tags: [Quiz - Personal]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: quizId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the quiz to delete
+ *         example: 507f1f77bcf86cd799439011
+ *     responses:
+ *       200:
+ *         description: Quiz deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Personal quiz deleted successfully
+ *       400:
+ *         description: Invalid quiz type
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: Only personal quizzes can be deleted through this endpoint
+ *       403:
+ *         description: Not authorized to delete this quiz
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: You are not authorized to delete this quiz
+ *       404:
+ *         description: Quiz not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.delete('/personal/:quizId', protect, deletePersonalQuiz);
 
 /**
  * @swagger
